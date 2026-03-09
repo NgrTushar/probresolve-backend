@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Server Error — ProbResolve{% endblock %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center py-24 text-center">
+  <div class="text-6xl mb-4">⚠️</div>
+  <h1 class="text-3xl font-bold text-gray-800 mb-2">Something Went Wrong</h1>
+  <p class="text-gray-500 mb-8 max-w-sm">
+    We ran into an unexpected problem. Please try again in a moment.
+    If the issue persists, the problem will resolve on its own soon.
+  </p>
+  <a href="/" class="bg-red-600 hover:bg-red-700 text-white font-medium px-5 py-2.5 rounded transition-colors">
+    Back to Home
+  </a>
+</div>
+{% endblock %}

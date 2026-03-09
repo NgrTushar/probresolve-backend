@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — ProbResolve{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+    <span class="text-sm text-gray-400">{{ problems|length }} complaint{{ 's' if problems|length != 1 else '' }}{% if q %} matching "{{ q }}"{% endif %}</span>
+  </div>
+
+  <form method="get" action="/admin" class="mb-4 flex gap-2">
+    <input type="hidden" name="key" value="{{ admin_key }}">
+    <input
+      type="search"
+      name="q"
+      value="{{ q }}"
+      placeholder="Search by title, description, or poster name…"
+      class="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+    >
+    <button type="submit"
+      class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
+      Search
+    </button>
+    {% if q %}
+    <a href="/admin?key={{ admin_key }}"
+      class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm font-medium">
+      Clear
+    </a>
+    {% endif %}
+  </form>
+
+  <div class="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th class="px-4 py-3 text-left font-medium text-gray-500 w-64">Title</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500">Domain</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500">Poster</th>
+          <th class="px-4 py-3 text-center font-medium text-gray-500">Reports</th>
+          <th class="px-4 py-3 text-center font-medium text-gray-500">Evidence</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500">Status</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500">Posted</th>
+          <th class="px-4 py-3 text-left font-medium text-gray-500">Actions</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100">
+        {% for problem in problems %}
+        {% set rc = report_counts.get(problem.id, 0) %}
+        <tr class="hover:bg-gray-50 {% if problem.is_hidden %}opacity-50{% endif %}">
+          <td class="px-4 py-3">
+            <a href="{{ frontend_url }}/problems/{{ problem.id }}/{{ problem.slug }}" target="_blank"
+               class="text-brand-navy hover:underline font-medium line-clamp-2">
+              {{ problem.title }}
+            </a>
+          </td>
+
+          <td class="px-4 py-3 text-gray-600">
+            {% if problem.domain %}{{ problem.domain.icon }} {{ problem.domain.name }}{% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            <div class="space-y-0.5">
+              {% if problem.poster_name %}
+              <div class="font-medium text-gray-800">{{ problem.poster_name }}</div>
+              {% else %}
+              <div class="text-gray-400 italic text-xs">No name</div>
+              {% endif %}
+              {% if problem.poster_email %}
+              <div class="text-gray-500 text-xs">✉ {{ problem.poster_email }}</div>
+              {% else %}
+              <div class="text-red-400 text-xs">✗ No email</div>
+              {% endif %}
+              {% if problem.poster_phone %}
+              <div class="text-gray-500 text-xs">📱 +91 {{ problem.poster_phone }}</div>
+              {% else %}
+              <div class="text-red-400 text-xs">✗ No phone</div>
+              {% endif %}
+            </div>
+          </td>
+
+          <td class="px-4 py-3 text-center">
+            {% if rc >= 5 %}
+            <span class="text-amber-600 font-semibold">{{ rc }}</span>
+            {% else %}
+            <span class="text-gray-500">{{ rc }}</span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3 text-center">
+            {% if problem.evidence %}
+            <span class="text-green-600 font-bold">✓ {{ problem.evidence|length }}</span>
+            {% else %}
+            <span class="text-gray-300">✗</span>
+            {% endif %}
+          </td>
+
+          <td class="px-4 py-3">
+            <div class="flex flex-wrap gap-1">
+              {% if problem.is_hidden %}
+              <span class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full text-xs">Hidden</span>
+              {% endif %}
+              {% if problem.is_verified %}
+              <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs">✅ Verified</span>
+              {% elif rc >= 5 and not problem.flags_cleared %}
+              <span class="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full text-xs">⚠️ Under Review</span>
+              {% endif %}
+              {% if problem.is_resolved %}
+              <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs">✓ Resolved</span>
+              {% endif %}
+              {% if not problem.is_hidden and not problem.is_verified and not problem.is_resolved and rc < 5 %}
+              <span class="text-gray-400 text-xs">Normal</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <td class="px-4 py-3 text-gray-500 whitespace-nowrap">
+            {{ problem.created_at.strftime("%d %b %Y") }}
+          </td>
+
+          <td class="px-4 py-3">
+            <div class="flex flex-wrap gap-1">
+              {% if not problem.is_verified %}
+              <form method="post" action="/admin/problems/{{ problem.id }}/verify?key={{ admin_key }}">
+                {% if problem.poster_email and problem.poster_phone %}
+                <button type="submit"
+                  class="bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded text-xs font-medium">
+                  Verify
+                </button>
+                {% else %}
+                <span class="text-xs text-gray-400 italic">Missing contact</span>
+                {% endif %}
+              </form>
+              {% endif %}
+
+              {% if not problem.is_hidden %}
+              <form method="post" action="/admin/problems/{{ problem.id }}/hide?key={{ admin_key }}"
+                    onsubmit="return confirm('Hide this complaint from public view?')">
+                <button type="submit"
+                  class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-medium">
+                  Hide
+                </button>
+              </form>
+              {% else %}
+              <form method="post" action="/admin/problems/{{ problem.id }}/unhide?key={{ admin_key }}">
+                <button type="submit"
+                  class="bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-2 py-1 rounded text-xs font-medium">
+                  Unhide
+                </button>
+              </form>
+              {% endif %}
+
+              {% if not problem.is_resolved %}
+              <form method="post" action="/admin/problems/{{ problem.id }}/resolve?key={{ admin_key }}">
+                <button type="submit"
+                  class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded text-xs font-medium">
+                  Resolve
+                </button>
+              </form>
+              {% endif %}
+
+              {% if rc >= 5 and not problem.flags_cleared %}
+              <form method="post" action="/admin/problems/{{ problem.id }}/clear-flags?key={{ admin_key }}">
+                <button type="submit"
+                  class="bg-amber-100 hover:bg-amber-200 text-amber-700 px-2 py-1 rounded text-xs font-medium">
+                  Clear Flags
+                </button>
+              </form>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" class="px-4 py-8 text-center text-gray-400">No complaints yet.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

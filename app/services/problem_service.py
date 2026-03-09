@@ -1,0 +1,126 @@
+import uuid
+
+from slugify import slugify
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.models import Problem, Report
+from app.schemas import ProblemCreate
+
+PAGE_SIZE = 20
+
+
+async def create_problem(db: AsyncSession, data: ProblemCreate) -> Problem:
+    slug = slugify(data.title, max_length=350, word_boundary=True)
+    amount_paise = data.amount_lost * 100 if data.amount_lost is not None else None
+
+    problem = Problem(
+        domain_id=data.domain_id,
+        category_id=data.category_id,
+        title=data.title,
+        slug=slug,
+        description=data.description,
+        amount_lost=amount_paise,
+        poster_name=data.poster_name,
+        poster_email=data.poster_email,
+        poster_phone=data.poster_phone,
+        location_state=data.location_state,
+        date_of_incident=data.date_of_incident,
+    )
+    db.add(problem)
+    await db.commit()
+    await db.refresh(problem)
+    return problem
+
+
+async def get_problem(db: AsyncSession, problem_id: uuid.UUID) -> Problem | None:
+    """Returns problem only if not hidden."""
+    result = await db.execute(
+        select(Problem)
+        .options(
+            selectinload(Problem.evidence),
+            selectinload(Problem.domain),
+            selectinload(Problem.category),
+        )
+        .where(Problem.id == problem_id, Problem.is_hidden == False)  # noqa: E712
+    )
+    return result.scalar_one_or_none()
+
+
+async def list_problems(
+    db: AsyncSession,
+    domain_id: uuid.UUID | None = None,
+    page: int = 1,
+) -> list[Problem]:
+    offset = (page - 1) * PAGE_SIZE
+    stmt = (
+        select(Problem)
+        .options(selectinload(Problem.domain), selectinload(Problem.category))
+        .order_by(Problem.created_at.desc())
+        .offset(offset)
+        .limit(PAGE_SIZE)
+    )
+    stmt = stmt.where(Problem.is_hidden == False)  # noqa: E712
+    if domain_id is not None:
+        stmt = stmt.where(Problem.domain_id == domain_id)
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def search_problems(
+    db: AsyncSession,
+    query: str,
+    page: int = 1,
+) -> list[Problem]:
+    offset = (page - 1) * PAGE_SIZE
+    pattern = f"%{query}%"
+    stmt = (
+        select(Problem)
+        .options(selectinload(Problem.domain), selectinload(Problem.category))
+        .where(
+            Problem.is_hidden == False,  # noqa: E712
+            Problem.title.ilike(pattern) | Problem.description.ilike(pattern),
+        )
+        .order_by(Problem.created_at.desc())
+        .offset(offset)
+        .limit(PAGE_SIZE)
+    )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
+
+
+async def get_report_counts(
+    db: AsyncSession, problem_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, int]:
+    """Return {problem_id: report_count} for the given problem IDs."""
+    if not problem_ids:
+        return {}
+    result = await db.execute(
+        select(Report.problem_id, func.count(Report.id))
+        .where(Report.problem_id.in_(problem_ids))
+        .group_by(Report.problem_id)
+    )
+    return dict(result.all())
+
+
+async def get_all_problems_admin(db: AsyncSession, q: str | None = None) -> list[Problem]:
+    """Return all problems including hidden — for admin use only."""
+    stmt = (
+        select(Problem)
+        .options(
+            selectinload(Problem.domain),
+            selectinload(Problem.category),
+            selectinload(Problem.evidence),
+        )
+        .order_by(Problem.created_at.desc())
+    )
+    if q:
+        pattern = f"%{q}%"
+        stmt = stmt.where(
+            Problem.title.ilike(pattern)
+            | Problem.description.ilike(pattern)
+            | Problem.poster_name.ilike(pattern)
+        )
+    result = await db.execute(stmt)
+    return list(result.scalars().all())
