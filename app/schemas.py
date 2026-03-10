@@ -44,7 +44,7 @@ class ProblemCreate(BaseModel):
     category_id: uuid.UUID | None = None
     title: str
     description: str
-    amount_lost: int | None = None  # in rupees; service converts to paise
+    amount_lost: int | None = None  # in rupees (₹)
     poster_name: str
     poster_email: EmailStr
     poster_phone: str
@@ -137,7 +137,7 @@ class ProblemListItemV2(BaseModel):
     flags_cleared: bool
     upvote_count: int
     report_count: int  # computed, not a DB column
-    amount_lost: int | None  # in paise — frontend divides by 100
+    amount_lost: int | None  # in rupees (₹)
     poster_name: str | None
     location_state: str | None
     date_of_incident: date | None

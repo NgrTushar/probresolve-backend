@@ -13,7 +13,6 @@ PAGE_SIZE = 20
 
 async def create_problem(db: AsyncSession, data: ProblemCreate) -> Problem:
     slug = slugify(data.title, max_length=350, word_boundary=True)
-    amount_paise = data.amount_lost * 100 if data.amount_lost is not None else None
 
     problem = Problem(
         domain_id=data.domain_id,
@@ -21,7 +20,7 @@ async def create_problem(db: AsyncSession, data: ProblemCreate) -> Problem:
         title=data.title,
         slug=slug,
         description=data.description,
-        amount_lost=amount_paise,
+        amount_lost=data.amount_lost,
         poster_name=data.poster_name,
         poster_email=data.poster_email,
         poster_phone=data.poster_phone,

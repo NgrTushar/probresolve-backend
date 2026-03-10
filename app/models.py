@@ -75,7 +75,7 @@ class Problem(Base):
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     slug: Mapped[str] = mapped_column(String(350), nullable=False)  # decorative, no UNIQUE
     description: Mapped[str] = mapped_column(Text, nullable=False)
-    amount_lost: Mapped[int | None] = mapped_column(BigInteger)  # in paise / smallest unit
+    amount_lost: Mapped[int | None] = mapped_column(BigInteger)  # in rupees (₹)
     poster_name: Mapped[str | None] = mapped_column(Text)
     poster_email: Mapped[str | None] = mapped_column(String(255))
     poster_phone: Mapped[str | None] = mapped_column(String(20))
