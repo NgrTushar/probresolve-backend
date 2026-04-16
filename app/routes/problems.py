@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.datastructures import UploadFile
 
 from app.config import MAX_FILE_SIZE, MAX_FILES, MAX_TOTAL_FILE_SIZE
-from app.deps import get_db
+from app.deps import get_db, get_optional_user
 from app.limiter import limiter
 from app.models import Evidence, Company
 from app.schemas import ProblemCreate
@@ -38,6 +38,7 @@ def parse_amount_lost(raw: str | None) -> int | None:
 async def create_problem(
     request: Request,
     db: AsyncSession = Depends(get_db),
+    user_id: _uuid.UUID | None = Depends(get_optional_user),
 ):
     form = await request.form()
 
@@ -78,6 +79,7 @@ async def create_problem(
             domain_id=domain_id,
             category_id=category_id,
             company_id=company_id,
+            user_id=user_id,
             title=str(form.get("title", "")),
             description=str(form.get("description", "")),
             amount_lost=amount_lost,

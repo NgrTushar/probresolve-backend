@@ -94,6 +94,9 @@ class Problem(Base):
     company_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("companies.id", ondelete="SET NULL")
     )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     slug: Mapped[str] = mapped_column(String(350), nullable=False)  # decorative, no UNIQUE
     description: Mapped[str] = mapped_column(Text, nullable=False)

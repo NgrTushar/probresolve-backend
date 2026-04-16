@@ -3,10 +3,11 @@ import uuid
 from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
-from app.deps import get_db
+from app.deps import get_db, get_current_user
 from app.escalation import ESCALATION_MAP, FALLBACK_ESCALATION
-from app.models import Company
+from app.models import Company, Problem
 from app.schemas import (
     CategoryEmbed,
     CategoryScore,
@@ -60,6 +61,22 @@ async def get_domains(db: AsyncSession = Depends(get_db)):
 async def get_categories(domain_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     categories = await category_service.get_categories_for_domain(db, domain_id)
     return categories
+
+
+@router.get("/problems/me", response_model=list[ProblemListItemV2])
+async def get_my_problems(
+    user_id: uuid.UUID = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    stmt = (
+        select(Problem)
+        .options(selectinload(Problem.domain), selectinload(Problem.category), selectinload(Problem.company))
+        .where(Problem.user_id == user_id)
+        .order_by(Problem.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    problems = result.scalars().all()
+    return await _build_problem_list(problems, db)
 
 
 @router.get("/problems", response_model=list[ProblemListItemV2])

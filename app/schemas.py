@@ -21,6 +21,7 @@ class ProblemCreate(BaseModel):
     domain_id: uuid.UUID
     category_id: uuid.UUID | None = None
     company_id: uuid.UUID | None = None
+    user_id: uuid.UUID | None = None
     title: str
     description: str
     amount_lost: int | None = None  # exact Rupees (no paise conversion)

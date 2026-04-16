@@ -19,6 +19,7 @@ async def create_problem(db: AsyncSession, data: ProblemCreate) -> Problem:
         domain_id=data.domain_id,
         category_id=data.category_id,
         company_id=data.company_id,
+        user_id=data.user_id,
         title=data.title,
         slug=slug,
         description=data.description,
